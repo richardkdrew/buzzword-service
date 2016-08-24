@@ -32,35 +32,85 @@ resources:
 jobs:
 - name: minor
   public: true
-  serial: true
   serial_groups: [version]
   plan:
   - get: version
     params: {bump: minor}
   - put: version
-    params: {file: version/number}
+    params: {file: version/version}
 
 - name: major
   public: true
-  serial: true
   serial_groups: [version]
   plan:
   - get: version
     params: {bump: major}
   - put: version
-    params: {file: version/number}
+    params: {file: version/version}
+
+- name: patch
+  public: true
+  serial_groups: [version]
+  plan:
+  - get: version
+    passed: [docker-image]
+    params: {bump: patch, pre: rc}
+    trigger: true
+  - put: version
+    params: {file: version/version}
 
 - name: build
   public: true
-  serial: true
+  serial_groups: [version]
   plan:
   - aggregate:  
     - get: buzzword-service
       trigger: true
+  - task: build
+    # file: api/ci/tasks/build.yml
+    config:
+      platform: linux
+
+      image_resource:
+        type: docker-image
+        source:
+          repository: microsoft/dotnet
+          version: 1.0.0-preview2-sdk
+
+      inputs:
+       - name: buzzword-service
+
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -e -x
+          
+          workingFolder=$PWD/buzzword-service/src/buzzword-service
+
+          cd $workingFolder
+
+          # running dotnet restore
+          dotnet restore --verbosity Error 
+          # build it!
+          dotnet build
+          # run unit tests
+          #dotnet test
+
+- name: docker-image
+  public: true
+  serial_groups: [version]
+  plan:
+  - aggregate:  
+    - get: buzzword-service
+      passed: [build]
+      trigger: true
     - get: dotnet-image
       params: {save: true}
     - get: version
-  - task: build
+      params: {bump: final}
+  - task: create-docker-build-context
     config:
       platform: linux
 
@@ -83,13 +133,6 @@ jobs:
         - -c
         - |
           set -e -x
-
-          # setting local version label
-          version="$(cat version/number)"
-          if [ -z "$version" ]; then
-            echo "missing version number"
-            exit 1
-          fi
           
           workingFolder=$PWD/buzzword-service/src/buzzword-service
           configuration="Release"          
@@ -111,7 +154,8 @@ jobs:
     params: 
       build: docker-build-context
       load_base: dotnet-image
-      tag: version/number
+      tag: version/version
       tag_as_latest: true    
   - put: version
-    params: {bump: patch}
+    params: {file: version/version}
+    
