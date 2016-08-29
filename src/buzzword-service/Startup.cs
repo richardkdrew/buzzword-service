@@ -27,16 +27,18 @@ namespace BuzzwordService
                 try 
                 {
                     // Construct the request
-                    BuzzwordServiceRequest request;            
-
+                    BuzzwordServiceRequest serviceRequest;            
                     using(var reader = new StreamReader(context.Request.Body))
                     {
-                        var content = reader.ReadToEndAsync().Result;
-                        request = JsonConvert.DeserializeObject<BuzzwordServiceRequest>(content);
+                        var request = reader.ReadToEndAsync().Result;
+                        serviceRequest = JsonConvert.DeserializeObject<BuzzwordServiceRequest>(request);
                     }         
 
+                    // Call the service
+                    var serviceResponse = service.GetBuzzwords(serviceRequest);
+
                     // Construct the response
-                    var response = JsonConvert.SerializeObject(service.GetBuzzwords(request));
+                    var response = JsonConvert.SerializeObject(serviceResponse);
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "application/json";
                     await context.Response.WriteAsync(response);
