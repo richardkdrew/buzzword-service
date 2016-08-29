@@ -5,6 +5,7 @@ using BuzzwordService.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
+using System.IO;
 
 namespace BuzzwordService
 {
@@ -25,10 +26,15 @@ namespace BuzzwordService
             {
                 try 
                 {
-                    // Consrtuct the request
-                    var request = new BuzzwordServiceRequest {
-                        Category = context.Request.Query["category"]
-                    };                        
+                    // Construct the request
+                    BuzzwordServiceRequest request;            
+
+                    using(var reader = new StreamReader(context.Request.Body))
+                    {
+                        var content = reader.ReadToEndAsync().Result;
+                        request = JsonConvert.DeserializeObject<BuzzwordServiceRequest>(content);
+                    }         
+
                     // Construct the response
                     var response = JsonConvert.SerializeObject(service.GetBuzzwords(request));
                     context.Response.StatusCode = StatusCodes.Status200OK;
@@ -43,7 +49,7 @@ namespace BuzzwordService
             };   
             
             // Build the route and tell the app to use it
-            app.UseRouter(new RouteBuilder(app).MapGet("buzzwords", RequestHandler).Build());                                
+            app.UseRouter(new RouteBuilder(app).MapPost("", RequestHandler).Build());                                
         }
     }
 }
