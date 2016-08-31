@@ -26,13 +26,23 @@ namespace BuzzwordService
             {
                 try 
                 {
-                    // Construct the request
-                    BuzzwordServiceRequest serviceRequest;            
-                    using(var reader = new StreamReader(context.Request.Body))
-                    {
-                        var request = reader.ReadToEndAsync().Result;
-                        serviceRequest = JsonConvert.DeserializeObject<BuzzwordServiceRequest>(request);
-                    }         
+                    // Get the request
+                    var serviceRequest = new BuzzwordServiceRequest {
+                        //Category = context.Request.Query["category"]
+                        Category = context.GetRouteValue("category").ToString()
+                    };            
+
+                    // var serviceRequest = new BuzzwordServiceRequest {
+                    //     Category = context.Request.Query["category"]
+                    // };         
+                                        
+                    //BuzzwordServiceRequest serviceRequest;  
+
+                    // using(var reader = new StreamReader(context.Request.Body))
+                    // {
+                    //     var request = reader.ReadToEndAsync().Result;
+                    //     serviceRequest = JsonConvert.DeserializeObject<BuzzwordServiceRequest>(request);
+                    // }         
 
                     // Call the service
                     var serviceResponse = service.GetBuzzwords(serviceRequest);
@@ -41,8 +51,12 @@ namespace BuzzwordService
                     var response = JsonConvert.SerializeObject(serviceResponse);
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "application/json";
+
+                    // Send the response
                     await context.Response.WriteAsync(response);
                 }
+                // Handle any expected failures
+                // Handle any unexpected failures
                 catch(Exception ex)
                 {
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
@@ -51,7 +65,7 @@ namespace BuzzwordService
             };   
             
             // Build the route and tell the app to use it
-            app.UseRouter(new RouteBuilder(app).MapPost("", RequestHandler).Build());                                
+            app.UseRouter(new RouteBuilder(app).MapGet("buzzwords/{category}", RequestHandler).Build());                                
         }
     }
 }
