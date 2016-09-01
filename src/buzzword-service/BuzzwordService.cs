@@ -1,39 +1,17 @@
-using BuzzwordService.Contracts;
 using BuzzwordService.Helpers;
-using System;
+using Nancy;
 
 namespace BuzzwordService 
 {
-    public class BuzzwordService : IBuzzwordService
+    public class BuzzwordModule : NancyModule
     {
-        public BuzzwordServiceResponse GetBuzzwords(BuzzwordServiceRequest request)
-        {            
-            string[] words = GetHelper(request.Category).GetBuzzwords();
-
-            var response = new BuzzwordServiceResponse();
-            response.AddRange(words);
-
-            return response;
-        }
-
-        private IBuzzwordHelper GetHelper(string category)
-        {
-            // Handle a null string
-            category = string.IsNullOrEmpty(category) ? "General" : category;
-
-            switch(category.ToLower())
-            {
-                case "technology":
-                    return new TechnologyBuzzwordHelper();
-                case "politics":
-                    return new PoliticsBuzzwordHelper();
-                case "education":
-                    return new EducationBuzzwordHelper();
-                case "general":                    
-                    return new GeneralBuzzwordhelper();
-                default:
-                    throw new Exception("Unrecognised buzzword category");
-            }            
+        public BuzzwordModule(IBuzzwordDataStore buzzwordDataStore)
+        {  
+            Get("/buzzwords/{category}", parameters => {
+                string category = ((string)parameters.category).ToLower();
+                if(buzzwordDataStore.CategoryExists(category)) return buzzwordDataStore.GetByCategory(category);
+                return HttpStatusCode.NotFound;                
+            });                   
         }
     }
 }
