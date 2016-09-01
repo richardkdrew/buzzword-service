@@ -1,3 +1,4 @@
+using System;
 using BuzzwordService.Helpers;
 using Nancy;
 
@@ -9,8 +10,13 @@ namespace BuzzwordService
         {  
             Get("/buzzwords/{category}", parameters => {
                 string category = ((string)parameters.category).ToLower();
-                if(buzzwordDataStore.CategoryExists(category)) return buzzwordDataStore.GetByCategory(category);
-                return HttpStatusCode.NotFound;                
+                if(!buzzwordDataStore.CategoryExists(category)) return HttpStatusCode.NotFound;                      
+
+                return new {
+                    buzzwords = buzzwordDataStore.GetByCategory(category),
+                    category = category,
+                    serviceId = Environment.MachineName
+                };       
             });                   
         }
     }
